@@ -10,6 +10,7 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.isMe,
     this.isEdited = false,
+    this.onOptions,
   }) : isFirstInSequence = true;
 
   // Create a message bubble that continues the sequence.
@@ -18,6 +19,7 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.isMe,
     this.isEdited = false,
+    this.onOptions,
   })  : isFirstInSequence = false,
         userImage = null,
         username = null;
@@ -41,9 +43,22 @@ class MessageBubble extends StatelessWidget {
   // Shows whether the message has been edited.
   final bool isEdited;
 
+  // Action callback when user taps edit / options
+  final VoidCallback? onOptions;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final actionButton = onOptions != null
+        ? IconButton(
+            icon: const Icon(Icons.more_vert, size: 18, color: Colors.black45),
+            onPressed: onOptions,
+            tooltip: 'Options',
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            constraints: const BoxConstraints(),
+          )
+        : const SizedBox.shrink();
 
     return Stack(
       children: [
@@ -67,7 +82,9 @@ class MessageBubble extends StatelessWidget {
             // The side of the chat screen the message should show at.
             mainAxisAlignment:
                 isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              if (isMe) actionButton,
               Column(
                 crossAxisAlignment:
                     isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -90,72 +107,72 @@ class MessageBubble extends StatelessWidget {
                     ),
 
                   // The "bubble" surrounding the message.
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isMe
-                          ? Colors.grey[300]
-                          : theme.colorScheme.secondary.withAlpha(200),
-                      // Only show the message bubble's "tail" if the message is the first in a sequence.
-                      borderRadius: BorderRadius.only(
-                        topLeft: !isMe && isFirstInSequence
-                            ? Radius.zero
-                            : const Radius.circular(12),
-                        topRight: isMe && isFirstInSequence
-                            ? Radius.zero
-                            : const Radius.circular(12),
-                        bottomLeft: const Radius.circular(12),
-                        bottomRight: const Radius.circular(12),
-                      ),
-                    ),
-                    // Set some reasonable constraints on the width of the
-                    // message bubble so it can adjust to the amount of text
-                    // it should show.
-                    constraints: const BoxConstraints(maxWidth: 200),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 10,
-                      horizontal: 14,
-                    ),
-                    // Margin around the bubble.
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 4,
-                      horizontal: 12,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: isMe
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          message,
-                          style: TextStyle(
-                            // Add a little line spacing to make the text look nicer
-                            height: 1.3,
-                            color: isMe
-                                ? Colors.black87
-                                : theme.colorScheme.onSecondary,
-                          ),
-                          softWrap: true,
+                  GestureDetector(
+                    onTap: onOptions,
+                    onLongPress: onOptions,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isMe
+                            ? Colors.grey[300]
+                            : theme.colorScheme.secondary.withAlpha(200),
+                        // Only show the message bubble's "tail" if the message is the first in a sequence.
+                        borderRadius: BorderRadius.only(
+                          topLeft: !isMe && isFirstInSequence
+                              ? Radius.zero
+                              : const Radius.circular(12),
+                          topRight: isMe && isFirstInSequence
+                              ? Radius.zero
+                              : const Radius.circular(12),
+                          bottomLeft: const Radius.circular(12),
+                          bottomRight: const Radius.circular(12),
                         ),
-                        if (isEdited)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              '(edited)',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontStyle: FontStyle.italic,
-                                color: isMe
-                                    ? Colors.black54
-                                    : theme.colorScheme.onSecondary
-                                        .withAlpha(180),
+                      ),
+                      constraints: const BoxConstraints(maxWidth: 200),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 14,
+                      ),
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 4,
+                        horizontal: 4,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: isMe
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            message,
+                            style: TextStyle(
+                              height: 1.3,
+                              color: isMe
+                                  ? Colors.black87
+                                  : theme.colorScheme.onSecondary,
+                            ),
+                            softWrap: true,
+                          ),
+                          if (isEdited)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                '(edited)',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontStyle: FontStyle.italic,
+                                  color: isMe
+                                      ? Colors.black54
+                                      : theme.colorScheme.onSecondary
+                                          .withAlpha(180),
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
+              if (!isMe) actionButton,
             ],
           ),
         ),

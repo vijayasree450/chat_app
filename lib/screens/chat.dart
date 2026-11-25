@@ -29,10 +29,22 @@ class _ChatScreenState extends State<ChatScreen> {
     // 3. Subscribe this device to the 'chat' topic
     await fcm.subscribeToTopic('chat');
 
-    // 4. Retrieve and print FCM registration token
+    // 4. Retrieve FCM token silently for notifications
     // ignore: deprecated_member_use
     final token = await fcm.getToken();
     debugPrint('FCM Token: $token');
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && token != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({'fcmToken': token}, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('Error saving FCM token to Firestore: $e');
+      }
+    }
 
     // 5. Handle notifications received while app is OPEN (Foreground)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {

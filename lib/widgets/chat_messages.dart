@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:chatapp/widgets/message_bubble.dart';
 
@@ -21,18 +22,29 @@ class ChatMessages extends StatelessWidget {
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [
-            if (isMe)
-              ListTile(
-                leading: const Icon(Icons.edit, color: Colors.blue),
-                title: const Text('Edit message'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showEditDialog(context, messageId, currentText);
-                },
-              ),
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.blue),
+              title: const Text('Edit message'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showEditDialog(context, messageId, currentText);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy, color: Colors.grey),
+              title: const Text('Copy text'),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: currentText));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Copied to clipboard')),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: Text(isMe ? 'Delete message' : 'Delete for everyone'),
+              title: const Text('Delete message'),
               onTap: () async {
                 Navigator.pop(ctx);
                 final confirmed = await showDialog<bool>(
@@ -59,10 +71,24 @@ class ChatMessages extends StatelessWidget {
                 );
 
                 if (confirmed == true) {
-                  await FirebaseFirestore.instance
-                      .collection('chat')
-                      .doc(messageId)
-                      .delete();
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('chat')
+                        .doc(messageId)
+                        .delete();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Message deleted.')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error deleting message: $e')),
+                      );
+                    }
+                  }
                 }
               },
             ),
@@ -78,47 +104,112 @@ class ChatMessages extends StatelessWidget {
     String currentText,
   ) {
     final editController = TextEditingController(text: currentText);
+    editController.selection = TextSelection.fromPosition(
+      TextPosition(offset: editController.text.length),
+    );
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Message'),
-        content: TextField(
-          controller: editController,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Message'),
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.edit, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Edit Message'),
+            ],
+          ),
+          content: TextField(
+            controller: editController,
+            autofocus: true,
+            maxLines: null,
+            decoration: const InputDecoration(
+              labelText: 'Message',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final newText = editController.text.trim();
+                      if (newText.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Message cannot be empty.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newText == currentText) {
+                        Navigator.pop(dialogCtx);
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isSaving = true;
+                      });
+
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('chat')
+                            .doc(messageId)
+                            .update({
+                          'text': newText,
+                          'isEdited': true,
+                        });
+
+                        if (dialogCtx.mounted) {
+                          Navigator.pop(dialogCtx);
+                        }
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Message updated successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (error) {
+                        setDialogState(() {
+                          isSaving = false;
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to update: $error'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newText = editController.text.trim();
-              if (newText.isNotEmpty && newText != currentText) {
-                await FirebaseFirestore.instance
-                    .collection('chat')
-                    .doc(messageId)
-                    .update({
-                  'text': newText,
-                  'isEdited': true,
-                });
-              }
-              if (context.mounted) {
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final authenticatedUser = FirebaseAuth.instance.currentUser!;
+    final authenticatedUser = FirebaseAuth.instance.currentUser;
 
     return StreamBuilder(
       stream: FirebaseFirestore.instance
@@ -159,34 +250,34 @@ class ChatMessages extends StatelessWidget {
             final nextMessageUserId =
                 nextChatMessage != null ? nextChatMessage['userId'] : null;
             final nextUserIsSame = nextMessageUserId == currentMessageUserId;
-            final isMe = authenticatedUser.uid == currentMessageUserId;
+            final isMe = authenticatedUser?.uid == currentMessageUserId;
 
-            Widget bubble;
+            void showOptions() {
+              _showMessageOptions(
+                context,
+                messageId,
+                messageText,
+                isMe,
+              );
+            }
+
             if (nextUserIsSame) {
-              bubble = MessageBubble.next(
+              return MessageBubble.next(
                 message: messageText,
                 isMe: isMe,
                 isEdited: isEdited,
+                onOptions: showOptions,
               );
             } else {
-              bubble = MessageBubble.first(
+              return MessageBubble.first(
                 userImage: chatMessage['userImage'],
                 username: chatMessage['username'] ?? 'User',
                 message: messageText,
                 isMe: isMe,
                 isEdited: isEdited,
+                onOptions: showOptions,
               );
             }
-
-            return InkWell(
-              onLongPress: () => _showMessageOptions(
-                context,
-                messageId,
-                messageText,
-                isMe,
-              ),
-              child: bubble,
-            );
           },
         );
       },
