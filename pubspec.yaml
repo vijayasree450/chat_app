@@ -1,19 +1,17 @@
+
 name: chatapp
 description: "A new Flutter project."
 
 publish_to: 'none'
-
 
 version: 1.0.0+1
 
 environment:
   sdk: ^3.9.2
 
-
 dependencies:
   flutter:
     sdk: flutter
-
 
   cupertino_icons: ^1.0.8
   firebase_core: ^5.1.0
@@ -27,18 +25,20 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-
+  flutter_launcher_icons: ^0.14.4
   flutter_lints: ^5.0.0
 
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo4.png"
+  min_sdk_android: 21
 
 flutter:
-
-  
   uses-material-design: true
-
 
   assets:
     - assets/images/1.png
     - assets/images/chat.png
-  #   - images/a_dot_ham.jpeg
-
+    - assets/images/logo.jpg
+    - assets/images/logo4.png
