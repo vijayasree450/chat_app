@@ -77,9 +77,30 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
+      String errorMessage = 'Authentication failed.';
+      if (error.code == 'user-not-found') {
+        errorMessage =
+            'No user found with this email. Tap "Create an account" to sign up.';
+      } else if (error.code == 'wrong-password' ||
+          error.code == 'invalid-credential') {
+        errorMessage =
+            'Incorrect email or password. If you have not registered yet, tap "Create an account" below.';
+      } else if (error.code == 'email-already-in-use') {
+        errorMessage = 'This email is already in use. Please log in instead.';
+      } else if (error.code == 'weak-password') {
+        errorMessage = 'The password is too weak. Must be at least 6 characters.';
+      } else if (error.code == 'invalid-email') {
+        errorMessage = 'The email address is invalid.';
+      } else if (error.message != null) {
+        errorMessage = error.message!;
+      }
+
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Authentication failed.')),
+        SnackBar(
+          content: Text(errorMessage),
+          duration: const Duration(seconds: 4),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
@@ -149,7 +170,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               return null;
                             },
                             onSaved: (value) {
-                              _enterEmail = value!;
+                              _enterEmail = value!.trim();
                             },
                           ),
                           if (!_isLogin)
@@ -167,7 +188,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 return null;
                               },
                               onSaved: (value) {
-                                _enteredUsername = value!;
+                                _enteredUsername = value!.trim();
                               },
                             ),
                           TextFormField(
@@ -182,7 +203,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               return null;
                             },
                             onSaved: (value) {
-                              _enterpassword = value!;
+                              _enterpassword = value!.trim();
                             },
                           ),
                           const SizedBox(height: 12),

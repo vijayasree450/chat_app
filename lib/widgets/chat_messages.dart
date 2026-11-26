@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:chatapp/widgets/message_bubble.dart';
 
 class ChatMessages extends StatelessWidget {
@@ -162,10 +161,7 @@ class ChatMessages extends StatelessWidget {
                         await FirebaseFirestore.instance
                             .collection('chat')
                             .doc(messageId)
-                            .update({
-                          'text': newText,
-                          'isEdited': true,
-                        });
+                            .update({'text': newText, 'isEdited': true});
 
                         if (dialogCtx.mounted) {
                           Navigator.pop(dialogCtx);
@@ -247,18 +243,14 @@ class ChatMessages extends StatelessWidget {
                 : null;
 
             final currentMessageUserId = chatMessage['userId'];
-            final nextMessageUserId =
-                nextChatMessage != null ? nextChatMessage['userId'] : null;
+            final nextMessageUserId = nextChatMessage != null
+                ? nextChatMessage['userId']
+                : null;
             final nextUserIsSame = nextMessageUserId == currentMessageUserId;
             final isMe = authenticatedUser?.uid == currentMessageUserId;
 
             void showOptions() {
-              _showMessageOptions(
-                context,
-                messageId,
-                messageText,
-                isMe,
-              );
+              _showMessageOptions(context, messageId, messageText, isMe);
             }
 
             if (nextUserIsSame) {

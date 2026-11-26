@@ -37,10 +37,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && token != null) {
       try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({'fcmToken': token}, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'fcmToken': token,
+        }, SetOptions(merge: true));
       } catch (e) {
         debugPrint('Error saving FCM token to Firestore: $e');
       }
@@ -79,18 +78,16 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Clear All',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
     if (confirmed == true && context.mounted) {
-      final chatDocs =
-          await FirebaseFirestore.instance.collection('chat').get();
+      final chatDocs = await FirebaseFirestore.instance
+          .collection('chat')
+          .get();
       final batch = FirebaseFirestore.instance.batch();
       for (final doc in chatDocs.docs) {
         batch.delete(doc.reference);
